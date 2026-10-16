@@ -1,0 +1,509 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Market Analysis Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f6fb;
+            color: #1e293b;
+        }
+
+        header {
+            background: linear-gradient(135deg, #172554, #2563eb);
+            color: white;
+            padding: 30px 7%;
+        }
+
+        header h1 {
+            margin: 0 0 10px;
+            font-size: 32px;
+        }
+
+        header p {
+            margin: 0;
+            color: #dbeafe;
+            line-height: 1.6;
+        }
+
+        main {
+            max-width: 1250px;
+            margin: 28px auto;
+            padding: 0 20px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .card, .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 4px 14px #0f172a0d;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .card p {
+            font-size: 25px;
+            font-weight: bold;
+            margin-bottom: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .panel {
+            margin-bottom: 24px;
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            color: #172554;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        input, button {
+            padding: 12px;
+            border-radius: 7px;
+            font-size: 15px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 200px;
+            border: 1px solid #cbd5e1;
+        }
+
+        button {
+            border: none;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .secondary {
+            background: #0f766e;
+        }
+
+        .secondary:hover {
+            background: #115e59;
+        }
+
+        #status {
+            color: #475569;
+            margin-top: 16px;
+        }
+
+        .job {
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            padding: 16px;
+            margin-top: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .job h3 {
+            margin: 0 0 10px;
+            color: #172554;
+        }
+
+        .job p {
+            margin: 7px 0;
+            color: #475569;
+            line-height: 1.5;
+        }
+
+        .job a {
+            display: inline-block;
+            margin-top: 8px;
+            color: #2563eb;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+        }
+
+        .notice {
+            background: #fff7ed;
+            color: #9a3412;
+            border-radius: 8px;
+            padding: 14px;
+            line-height: 1.6;
+            margin-top: 18px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 24px;
+            color: #64748b;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 24px 20px;
+            }
+
+            header h1 {
+                font-size: 26px;
+            }
+
+            .search-row {
+                flex-direction: column;
+            }
+
+            .search-row input,
+            .search-row button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Job Market Analysis Dashboard</h1>
+    <p>
+        Explore job postings, discover matching opportunities,
+        and view monthly market forecasts.
+    </p>
+</header>
+
+<main>
+
+    <section class="cards">
+        <div class="card">
+            <h3>Dataset Job Records</h3>
+            <p id="totalJobs">244,828</p>
+        </div>
+
+        <div class="card">
+            <h3>Last Recorded Month</h3>
+            <p id="lastMonth">Loading...</p>
+        </div>
+
+        <div class="card">
+            <h3>Forecast Month</h3>
+            <p id="forecastMonth">Loading...</p>
+        </div>
+
+        <div class="card">
+            <h3>Estimated Postings</h3>
+            <p id="forecastCount">Loading...</p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Search Jobs</h2>
+
+        <div class="search-row">
+            <input
+                id="keyword"
+                type="text"
+                placeholder="Enter a job title, e.g. designer"
+                aria-label="Job search keyword"
+            >
+
+            <button id="searchButton" onclick="searchJobs()">
+                Search Jobs
+            </button>
+
+            <button
+                id="recommendButton"
+                class="secondary"
+                onclick="getRecommendations()"
+            >
+                Get Recommendations
+            </button>
+        </div>
+
+        <p id="status" role="status" aria-live="polite">
+            Enter a keyword to get started.
+        </p>
+
+        <div id="results"></div>
+    </section>
+
+    <section class="panel">
+        <h2>Monthly Job Posting Trends</h2>
+
+        <div class="chart-container">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+
+        <p id="chartStatus"></p>
+
+        <div class="notice">
+            Forecasts are estimates based on historical data.
+            Uneven monthly data coverage may affect prediction reliability.
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    Job Market Analysis and Recommendation System
+</footer>
+
+<script>
+    let monthlyChart = null;
+
+    // Load forecast cards and monthly chart
+    async function loadForecast() {
+        const chartStatus = document.getElementById("chartStatus");
+
+        try {
+            const response = await fetch("/api/forecast");
+
+            if (!response.ok) {
+                throw new Error("Forecast API request failed");
+            }
+
+            const data = await response.json();
+
+            document.getElementById("lastMonth").textContent =
+                data.last_recorded_month;
+
+            document.getElementById("forecastMonth").textContent =
+                data.forecast_month;
+
+            document.getElementById("forecastCount").textContent =
+                Number(data.estimated_job_postings).toLocaleString();
+
+            const history = data.historical_monthly_data || [];
+
+            if (history.length === 0) {
+                chartStatus.textContent = "No monthly data available.";
+                return;
+            }
+
+            const months = history.map(item => item.Month);
+            const counts = history.map(item => item["Job Postings"]);
+
+            if (typeof Chart === "undefined") {
+                chartStatus.textContent =
+                    "Chart library could not load. Check your internet connection.";
+                return;
+            }
+
+            if (monthlyChart) {
+                monthlyChart.destroy();
+            }
+
+            monthlyChart = new Chart(
+                document.getElementById("monthlyChart"),
+                {
+                    type: "line",
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: "Job Postings",
+                            data: counts,
+                            borderColor: "#2563eb",
+                            backgroundColor: "rgba(37, 99, 235, 0.15)",
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: "Number of Job Postings"
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: "Month"
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+
+            chartStatus.textContent = "";
+
+        } catch (error) {
+            console.error("Forecast loading error:", error);
+
+            document.getElementById("lastMonth").textContent = "Unavailable";
+            document.getElementById("forecastMonth").textContent = "Unavailable";
+            document.getElementById("forecastCount").textContent = "Unavailable";
+
+            chartStatus.textContent =
+                "Could not load forecast data. Check that the Flask server is running.";
+        }
+    }
+
+    // Search jobs
+    async function searchJobs() {
+        const keyword = document.getElementById("keyword").value.trim();
+
+        if (!keyword) {
+            document.getElementById("status").textContent =
+                "Please enter a job keyword.";
+            return;
+        }
+
+        await showJobs("/api/jobs?keyword=" + encodeURIComponent(keyword));
+    }
+
+    // Get recommendations
+    async function getRecommendations() {
+        const keyword = document.getElementById("keyword").value.trim();
+
+        if (!keyword) {
+            document.getElementById("status").textContent =
+                "Please enter a job keyword.";
+            return;
+        }
+
+        await showJobs(
+            "/api/recommendations?keyword=" + encodeURIComponent(keyword)
+        );
+    }
+
+    // Display search results
+    async function showJobs(url) {
+        const status = document.getElementById("status");
+        const results = document.getElementById("results");
+        const searchButton = document.getElementById("searchButton");
+        const recommendButton = document.getElementById("recommendButton");
+
+        status.textContent = "Loading jobs...";
+        results.replaceChildren();
+
+        searchButton.disabled = true;
+        recommendButton.disabled = true;
+
+        try {
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error("Job API request failed");
+            }
+
+            const data = await response.json();
+
+            let jobs = [];
+
+            if (Array.isArray(data)) {
+                jobs = data;
+            } else if (Array.isArray(data.jobs)) {
+                jobs = data.jobs;
+            } else if (Array.isArray(data.results)) {
+                jobs = data.results;
+            } else if (Array.isArray(data.recommendations)) {
+                jobs = data.recommendations;
+            }
+
+            if (jobs.length === 0) {
+                status.textContent =
+                    "No matching jobs found. Check the API response format.";
+                return;
+            }
+
+            status.textContent = "Found " + jobs.length + " results.";
+
+            jobs.forEach(job => {
+                const card = document.createElement("div");
+                card.className = "job";
+
+                const title = document.createElement("h3");
+                title.textContent = job.title || "Job title unavailable";
+                card.appendChild(title);
+
+                const country = document.createElement("p");
+                country.textContent =
+                    "Country: " + (job.country || "Not specified");
+                card.appendChild(country);
+
+                const budget = document.createElement("p");
+                const amount =
+                    job.budget ?? job.hourly_low ?? job.hourly_high;
+
+                budget.textContent =
+                    "Budget / Hourly Rate: " +
+                    (amount !== undefined && amount !== null
+                        ? amount
+                        : "Not specified");
+
+                card.appendChild(budget);
+
+                if (job.link) {
+                    const link = document.createElement("a");
+                    link.href = job.link;
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    link.textContent = "View Job";
+                    card.appendChild(link);
+                }
+
+                results.appendChild(card);
+            });
+
+        } catch (error) {
+            console.error("Job search error:", error);
+            status.textContent =
+                "Could not load jobs. Check the Flask server and API.";
+        } finally {
+            searchButton.disabled = false;
+            recommendButton.disabled = false;
+        }
+    }
+
+    // Allow Enter key to search
+    document.getElementById("keyword").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            searchJobs();
+        }
+    });
+
+    // Load dashboard data when page opens
+    loadForecast();
+</script>
+
+</body>
+</html>
